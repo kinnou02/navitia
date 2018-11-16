@@ -1,5 +1,6 @@
 
 language: python
+dist: xenial
 python:
   - "2.7"
   - "3.6"
@@ -31,5 +32,20 @@ matrix:
     - python: "3.6"
       before_script: python3.6 -m pip install black==18.9b0;
       script:  black --check --diff .
+    - language: cpp
+      cache: ccache
+      before_script:
+        - sudo apt update && sudo apt install  g++ cmake libzmq-dev libosmpbf-dev libboost-all-dev libgoogle-perftools-dev libprotobuf-dev python-pip libproj-dev protobuf-compiler libpqxx-dev
+        - wget -P /tmp/ http://fr.archive.ubuntu.com/ubuntu/pool/universe/l/log4cplus/liblog4cplus-1.1-9_1.1.2-3.2_amd64.deb
+        - wget -P /tmp/ http://fr.archive.ubuntu.com/ubuntu/pool/universe/l/log4cplus/liblog4cplus-dev_1.1.2-3.2_amd64.deb
+        - sudo dpkg -i /tmp/liblog4cplus-1.1-9_1.1.2-3.2_amd64.deb  /tmp/liblog4cplus-dev_1.1.2-3.2_amd64.deb
+      script:
+        - df -h
+        - lscpu
+        - mkdir build && cd build
+        - cmake -DCMAKE_BUILD_TYPE=Release ../source
+        - make -j$(nproc)
+
+
   exclude:
     - python: "3.6"

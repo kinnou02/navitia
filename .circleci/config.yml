@@ -1,14 +1,21 @@
 version: 2
 jobs:
   build:
-    docker: navitia/debian8_dev
-  steps:
-    - checkout
-    - run: lscpu
-    - run: free -m
-    - run: git submodule update --init --recursive
-    - run: pip install --exists-action=w -r source/jormungandr/requirements_dev.txt
-    - run: mkdir build && cd build
-    - run: cmake -DCMAKE_BUILD_TYPE=Release ../source
-    - run: make -j$(nproc)
-    - run: make test
+    docker:
+      - image: navitia/debian8_dev
+    resource_class: large
+    steps:
+      - checkout
+      - run: lscpu
+      - run: free -m
+      - run: git submodule update --init --recursive
+      - run: pip install --exists-action=w -r source/jormungandr/requirements_dev.txt
+      - run: mkdir build
+      - run: cd build && cmake -DCMAKE_BUILD_TYPE=Release ../source
+      - run: cd build && make -j3
+      - run: cd build && make test
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build

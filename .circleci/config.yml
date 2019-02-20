@@ -4,6 +4,8 @@ jobs:
     docker: navitia/debian8_dev
   steps:
     - checkout
+    - run: lscpu
+    - run: free -m
     - run: git submodule update --init --recursive
     - run: pip install --exists-action=w -r source/jormungandr/requirements_dev.txt
     - run: mkdir build && cd build

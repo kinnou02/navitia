@@ -110,24 +110,26 @@ class Sytral(RealtimeProxy):
             )
             raise RealtimeProxyError(str(e))
 
-    def _make_url(self, route_point):
+    def _make_urls(self, route_point):
         """
         The url returns something like a departure on a stop point
         """
 
-        stop_id = route_point.fetch_stop_id(self.object_id_tag)
+        stop_ids = route_point.fetch_all_stop_id(self.object_id_tag)
 
-        if not stop_id:
+        if not stop_ids:
             logging.getLogger(__name__).debug(
-                'missing realtime id for {obj}: stop code={s}'.format(obj=route_point, s=stop_id),
+                'missing realtime id for {obj}: stop code={s}'.format(obj=route_point, s=stop_ids),
                 extra={'rt_system_id': unicode(self.rt_system_id)},
             )
             self.record_internal_failure('missing id')
             return None
 
-        url = "{base_url}?stop_id={stop_id}".format(base_url=self.service_url, stop_id=stop_id)
+        urls = []
+        for stop_id in set(stop_ids):
+            urls.append("{base_url}?stop_id={stop_id}".format(base_url=self.service_url, stop_id=stop_id))
 
-        return url
+        return urls
 
     def _get_dt(self, datetime_str):
         dt = aniso8601.parse_datetime(datetime_str)
@@ -136,22 +138,21 @@ class Sytral(RealtimeProxy):
 
         return utc_dt
 
-    def _get_passages(self, route_point, resp):
+    def _get_passages(self, route_point, departures):
         logging.getLogger(__name__).debug(
-            'sytralrt response: {}'.format(resp), extra={'rt_system_id': unicode(self.rt_system_id)}
+            'sytralrt response: {}'.format(departures), extra={'rt_system_id': unicode(self.rt_system_id)}
         )
 
         # One line navitia can be multiple lines on the SAE side
         line_ids = route_point.fetch_all_line_id(self.object_id_tag)
 
-        departures = resp.get('departures', [])
         next_passages = []
         for next_expected_st in departures:
             if next_expected_st['line'] not in line_ids:
                 continue
             dt = self._get_dt(next_expected_st['datetime'])
             direction = next_expected_st.get('direction_name')
-            is_real_time = next_expected_st.get('type') == 'E'
+            is_real_time = True
             next_passage = RealTimePassage(dt, direction, is_real_time)
             next_passages.append(next_passage)
 
@@ -160,19 +161,22 @@ class Sytral(RealtimeProxy):
     def _get_next_passage_for_route_point(
         self, route_point, count=None, from_dt=None, current_dt=None, duration=None
     ):
-        url = self._make_url(route_point)
-        if not url:
+        urls = self._make_urls(route_point)
+        if not urls:
             return None
-        r = self._call(url)
+        departures = []
+        for url in urls:
+            r = self._call(url)
 
-        if r.status_code != requests.codes.ok:
-            logging.getLogger(__name__).error(
-                'sytralrt service unavailable, impossible to query : {}'.format(r.url),
-                extra={'rt_system_id': unicode(self.rt_system_id)},
-            )
-            raise RealtimeProxyError('non 200 response')
+            if r.status_code != requests.codes.ok:
+                logging.getLogger(__name__).error(
+                    'sytralrt service unavailable, impossible to query : {}'.format(r.url),
+                    extra={'rt_system_id': unicode(self.rt_system_id)},
+                )
+                raise RealtimeProxyError('non 200 response')
+            departures.extend(r.json().get('departures', []))
 
-        return self._get_passages(route_point, r.json())
+        return self._get_passages(route_point, departures)
 
     def status(self):
         return {

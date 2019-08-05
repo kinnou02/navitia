@@ -139,6 +139,10 @@ class RoutePoint(object):
         # type: (Text) -> Optional[Text]
         return self._get_code(self.pb_stop_point, object_id_tag)
 
+    def fetch_all_stop_id(self, object_id_tag):
+        # type: (Text) -> List[Text]
+        return self._get_all_codes(self.pb_stop_point, object_id_tag)
+
     def fetch_line_id(self, object_id_tag):
         # type: (Text) -> Optional[Text]
         return self._get_code(self.pb_route.line, object_id_tag)

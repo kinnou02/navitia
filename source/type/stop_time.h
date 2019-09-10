@@ -35,6 +35,11 @@ www.navitia.io
 #include "type/rt_level.h"
 #include "type/datetime.h"
 #include "type/vehicle_journey.h"  //required to inline order()
+#include <boost/serialization/split_member.hpp>
+
+// TODO move serialization in cpp
+#include "type/stop_point.h"
+#include "type/route.h"
 
 namespace navitia {
 namespace type {
@@ -127,10 +132,20 @@ struct StopTime {
     //  Note : This is usefull in the case of a StopTimeUpdate that owns a partially constructed Stop Time.
     bool is_similar(const StopTime& st) const;
 
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
     template <class Archive>
-    void serialize(Archive& ar, const unsigned int) {
+    void save(Archive& ar, const unsigned int) const {
         ar& arrival_time& departure_time& boarding_time& alighting_time& vehicle_journey& stop_point& shape_from_prev&
             properties& local_traffic_zone;
+    }
+    template <class Archive>
+    void load(Archive& ar, const unsigned int) {
+        ar& arrival_time& departure_time& boarding_time& alighting_time& vehicle_journey& stop_point& shape_from_prev&
+            properties& local_traffic_zone;
+        if (this->vehicle_journey && this->vehicle_journey->route && this->stop_point) {
+            this->stop_point->route_list.insert(this->vehicle_journey->route);
+            this->vehicle_journey->route->stop_point_list.insert(this->stop_point);
+        }
     }
 };
 }  // namespace type

@@ -38,6 +38,7 @@ from jormungandr.realtime_schedule.realtime_proxy import RealtimeProxy, Realtime
 from jormungandr.schedule import RealTimePassage
 from datetime import datetime, time
 from navitiacommon.ratelimit import RateLimiter, FakeRateLimiter
+import six
 
 
 def _to_duration(hour_str):
@@ -134,18 +135,18 @@ class Timeo(RealtimeProxy):
         except pybreaker.CircuitBreakerError as e:
             logging.getLogger(__name__).error(
                 'Timeo RT service dead, using base schedule (error: {}'.format(e),
-                extra={'rt_system_id': unicode(self.rt_system_id)},
+                extra={'rt_system_id': six.text_type(self.rt_system_id)},
             )
             raise RealtimeProxyError('circuit breaker open')
         except requests.Timeout as t:
             logging.getLogger(__name__).error(
                 'Timeo RT service timeout, using base schedule (error: {}'.format(t),
-                extra={'rt_system_id': unicode(self.rt_system_id)},
+                extra={'rt_system_id': six.text_type(self.rt_system_id)},
             )
             raise RealtimeProxyError('timeout')
         except Exception as e:
             logging.getLogger(__name__).exception(
-                'Timeo RT error, using base schedule', extra={'rt_system_id': unicode(self.rt_system_id)}
+                'Timeo RT error, using base schedule', extra={'rt_system_id': six.text_type(self.rt_system_id)}
             )
             raise RealtimeProxyError(str(e))
 
@@ -168,14 +169,15 @@ class Timeo(RealtimeProxy):
         if self._is_tomorrow(from_dt, current_dt):
             logging.getLogger(__name__).info(
                 'Timeo RT service , Can not call Timeo for tomorrow.',
-                extra={'rt_system_id': unicode(self.rt_system_id)},
+                extra={'rt_system_id': six.text_type(self.rt_system_id)},
             )
             return None
         url = self._make_url(route_point, count, from_dt)
         if not url:
             return None
         logging.getLogger(__name__).debug(
-            'Timeo RT service , call url : {}'.format(url), extra={'rt_system_id': unicode(self.rt_system_id)}
+            'Timeo RT service , call url : {}'.format(url),
+            extra={'rt_system_id': six.text_type(self.rt_system_id)},
         )
         r = self._call_timeo(url)
         if not r:
@@ -185,7 +187,7 @@ class Timeo(RealtimeProxy):
             # TODO better error handling, the response might be in 200 but in error
             logging.getLogger(__name__).error(
                 'Timeo RT service unavailable, impossible to query : {}'.format(r.url),
-                extra={'rt_system_id': unicode(self.rt_system_id), 'status_code': r.status_code},
+                extra={'rt_system_id': six.text_type(self.rt_system_id), 'status_code': r.status_code},
             )
             raise RealtimeProxyError('non 200 response')
 
@@ -193,7 +195,7 @@ class Timeo(RealtimeProxy):
 
     def _get_passages(self, timeo_resp, current_dt, line_uri=None):
         logging.getLogger(__name__).debug(
-            'timeo response: {}'.format(timeo_resp), extra={'rt_system_id': unicode(self.rt_system_id)}
+            'timeo response: {}'.format(timeo_resp), extra={'rt_system_id': six.text_type(self.rt_system_id)}
         )
 
         st_responses = timeo_resp.get('StopTimesResponse')
@@ -201,7 +203,7 @@ class Timeo(RealtimeProxy):
         if not st_responses or len(st_responses) != 1:
             logging.getLogger(__name__).warning(
                 'invalid timeo response: {}'.format(timeo_resp),
-                extra={'rt_system_id': unicode(self.rt_system_id)},
+                extra={'rt_system_id': six.text_type(self.rt_system_id)},
             )
             raise RealtimeProxyError('invalid response')
 
@@ -247,7 +249,7 @@ class Timeo(RealtimeProxy):
             logging.getLogger(__name__).debug(
                 'missing realtime id for {obj}: '
                 'stop code={s}, line code={l}, route code={r}'.format(obj=route_point, s=stop, l=line, r=route),
-                extra={'rt_system_id': unicode(self.rt_system_id)},
+                extra={'rt_system_id': six.text_type(self.rt_system_id)},
             )
             self.record_internal_failure('missing id')
             return None
@@ -299,7 +301,7 @@ class Timeo(RealtimeProxy):
 
     def status(self):
         return {
-            'id': unicode(self.rt_system_id),
+            'id': six.text_type(self.rt_system_id),
             'timeout': self.timeout,
             'circuit_breaker': {
                 'current_state': self.breaker.current_state,

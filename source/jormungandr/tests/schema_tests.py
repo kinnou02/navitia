@@ -37,7 +37,9 @@ import flex
 from flex.exceptions import ValidationError
 
 from tests.tests_mechanism import dataset, AbstractTestFixture, mock_bss_providers, mock_car_park_providers
-from itertools import chain, ifilter
+from itertools import chain
+from six.moves import filter
+import six
 
 
 def get_params(schema):
@@ -133,8 +135,8 @@ class SchemaChecker:
             )
             assert param.has_key('type')
 
-            assert type(param['name']) is unicode
-            assert type(param['description']) is unicode
+            assert type(param['name']) is six.text_type
+            assert type(param['description']) is six.text_type
 
             assert any(
                 param['type'] == t
@@ -371,7 +373,7 @@ class TestSwaggerSchema(AbstractTestFixture, SchemaChecker):
             other_param = any(elem in path for elem in ['{id}', '{uri}'])
             return '{region}' in path and not other_param
 
-        urls = chain(ifilter(endpoints_with_no_param, paths), ifilter(endpoints_with_only_region_param, paths))
+        urls = chain(filter(endpoints_with_no_param, paths), filter(endpoints_with_only_region_param, paths))
 
         for u in urls:
             url = '/v1' + u.format(region='main_routing_test') + '?schema=true'

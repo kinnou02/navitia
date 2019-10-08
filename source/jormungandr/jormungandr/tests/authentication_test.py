@@ -34,6 +34,7 @@ from jormungandr.authentication import get_token, get_used_coverages, register_u
 import base64
 import pytest
 from werkzeug.exceptions import Unauthorized
+import six
 
 
 def get_token_direct_test():
@@ -42,8 +43,9 @@ def get_token_direct_test():
 
 
 def get_token_basic_auth_test():
-    key = base64.encodestring('mykey:').strip()
-    with app.test_request_context('/', headers={'Authorization': 'BASIC {}'.format(key)}):
+    key = base64.standard_b64encode(b'mykey:').strip()
+    header = 'BASIC {}'.format(key.decode())
+    with app.test_request_context('/', headers={'Authorization': header}):
         assert get_token() == 'mykey'
 
 
@@ -59,8 +61,7 @@ def get_token_basic_auth_unicode_test():
     """
     key = base64.encodestring(u'maclé:'.encode('utf-8')).strip()
     with app.test_request_context('/', headers={'Authorization': 'BASIC {}'.format(key)}):
-        with pytest.raises(Unauthorized):
-            get_token()
+        assert get_token() == 'maclé'
 
 
 def get_token_url_test():

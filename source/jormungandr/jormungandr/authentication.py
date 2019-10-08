@@ -31,6 +31,7 @@
 from __future__ import absolute_import, print_function, unicode_literals, division
 import logging
 import binascii
+from typing import Text, Optional
 
 import flask_restful
 from flask import request, g
@@ -62,8 +63,8 @@ def authentication_required(func):
                 region = i_manager.get_region(lon=kwargs['lon'], lat=kwargs['lat'])
             except RegionNotFound:
                 pass
-        elif current_app.config.get('DEFAULT_REGION'):  # if a default region is defined in config
-            region = current_app.config.get('DEFAULT_REGION')  # we use it
+        elif current_app.config.get(str('DEFAULT_REGION')):  # if a default region is defined in config
+            region = current_app.config.get(str('DEFAULT_REGION'))  # we use it
         user = get_user(token=get_token())
         if not region:
             # we could not find any regions, we abort
@@ -75,6 +76,7 @@ def authentication_required(func):
 
 
 def get_token():
+    # type: () -> Optional[Text]
     """
     find the Token in the "Authorization" HTTP header
     two cases are handle:
@@ -96,8 +98,8 @@ def get_token():
     if len(args) == 2:
         b64 = args[1]
         try:
-            decoded = base64.decodestring(b64)
-            return decoded.split(':')[0]
+            decoded = base64.standard_b64decode(b64)
+            return decoded.split(b':')[0].decode(encoding='utf-8')
         except (binascii.Error, UnicodeDecodeError):
             logging.getLogger(__name__).info('badly formated token %s', auth)
             flask_restful.abort(401, message="Unauthorized, invalid token", status=401)
@@ -117,7 +119,7 @@ def has_access(region, api, abort, user):
     Warning: Please this function is cached therefore it should not be
     dependent of the request context, so keep it as a pure function.
     """
-    if current_app.config.get('PUBLIC', False):
+    if current_app.config.get(str('PUBLIC'), False):
         # if jormungandr is on public mode we skip the authentification process
         return True
 
@@ -175,7 +177,7 @@ def get_all_available_instances(user):
 
     Note: only users with access to free instances can use global /places
     """
-    if current_app.config.get('PUBLIC', False) or current_app.config.get('DISABLE_DATABASE', False):
+    if current_app.config.get(str('PUBLIC'), False) or current_app.config.get(str('DISABLE_DATABASE'), False):
         from jormungandr import i_manager
 
         return i_manager.instances.values()
@@ -199,7 +201,7 @@ def get_user(token, abort_if_no_token=True):
     else:
         if not token:
             # a token is mandatory for non public jormungandr
-            if not current_app.config.get('PUBLIC', False):
+            if not current_app.config.get(str('PUBLIC'), False):
                 if abort_if_no_token:
                     flask_restful.abort(
                         401,
